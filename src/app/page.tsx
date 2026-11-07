@@ -1,69 +1,173 @@
-import Image from "next/image";
+// src/app/page.tsx
+'use client';
 
-export default function Home() {
+import React, { useState, useMemo } from 'react';
+import { OrientationMode } from '@/types/transportation';
+import { solveNorthWestCorner } from '@/utils/northwestAlgorithm';
+import MatrixControls from '@/components/MatrixControls';
+import TransportationTable from '@/components/TransportationTable';
+import SolutionSummary from '@/components/SolutionSummary';
+
+// ข้อมูลเริ่มต้นตามรูปโจทย์ Q2 (3 Supply Rows x 4 Demand Columns)
+const INITIAL_COSTS: number[][] = [
+  [5, 1, 4, 9],
+  [2, 8, 6, 3],
+  [3, 10, 5, 7],
+];
+const INITIAL_SUPPLY: number[] = [250, 150, 300];
+const INITIAL_DEMAND: number[] = [150, 200, 100, 250];
+
+export default function HomePage() {
+  // State เก็บข้อมูลหลักของตาราง
+  const [costs, setCosts] = useState<number[][]>(INITIAL_COSTS);
+  const [supply, setSupply] = useState<number[]>(INITIAL_SUPPLY);
+  const [demand, setDemand] = useState<number[]>(INITIAL_DEMAND);
+  const [orientation, setOrientation] = useState<OrientationMode>('standard');
+  const [showSolution, setShowSolution] = useState<boolean>(true);
+
+  // คำนวณผลลัพธ์ North-West Corner แบบ Real-time ทุกครั้งที่ตัวเลขหรือแกนเปลี่ยน
+  const result = useMemo(() => {
+    return solveNorthWestCorner(costs, supply, demand, orientation);
+  }, [costs, supply, demand, orientation]);
+
+  // --- ฟังก์ชันจัดการแก้ไขค่าในตาราง ---
+  const handleCostChange = (
+    supplyIdx: number,
+    demandIdx: number,
+    value: number
+  ) => {
+    setCosts((prev) =>
+      prev.map((row, r) =>
+        r === supplyIdx
+          ? row.map((cell, c) => (c === demandIdx ? value : cell))
+          : row
+      )
+    );
+  };
+
+  const handleSupplyChange = (index: number, value: number) => {
+    setSupply((prev) => prev.map((v, i) => (i === index ? value : v)));
+  };
+
+  const handleDemandChange = (index: number, value: number) => {
+    setDemand((prev) => prev.map((v, i) => (i === index ? value : v)));
+  };
+
+  // --- ฟังก์ชันเพิ่ม/ลดแถวและคอลัมน์ตามแกนปัจจุบัน ---
+  const addSupply = () => {
+    if (supply.length >= 8) return;
+    setSupply((prev) => [...prev, 100]);
+    setCosts((prev) => [...prev, new Array(demand.length).fill(0)]);
+  };
+
+  const removeSupply = () => {
+    if (supply.length <= 1) return;
+    setSupply((prev) => prev.slice(0, -1));
+    setCosts((prev) => prev.slice(0, -1));
+  };
+
+  const addDemand = () => {
+    if (demand.length >= 8) return;
+    setDemand((prev) => [...prev, 100]);
+    setCosts((prev) => prev.map((row) => [...row, 0]));
+  };
+
+  const removeDemand = () => {
+    if (demand.length <= 1) return;
+    setDemand((prev) => prev.slice(0, -1));
+    setCosts((prev) => prev.map((row) => row.slice(0, -1)));
+  };
+
+  // ผูกปุ่มเพิ่ม/ลดแถวและคอลัมน์ให้ตรงกับแกนที่แสดงผลอยู่
+  const handleAddRow = () =>
+    orientation === 'standard' ? addSupply() : addDemand();
+  const handleRemoveRow = () =>
+    orientation === 'standard' ? removeSupply() : removeDemand();
+  const handleAddCol = () =>
+    orientation === 'standard' ? addDemand() : addSupply();
+  const handleRemoveCol = () =>
+    orientation === 'standard' ? removeDemand() : removeSupply();
+
+  // --- ฟังก์ชันสลับแกน, รีเซ็ตโจทย์ตัวอย่าง, และล้างตาราง ---
+  const handleToggleOrientation = () => {
+    setOrientation((prev) => (prev === 'standard' ? 'transposed' : 'standard'));
+  };
+
+  const handleResetDefault = () => {
+    setCosts(INITIAL_COSTS.map((row) => [...row]));
+    setSupply([...INITIAL_SUPPLY]);
+    setDemand([...INITIAL_DEMAND]);
+    setOrientation('standard');
+    setShowSolution(true);
+  };
+
+  const handleClearData = () => {
+    setCosts((prev) => prev.map((row) => row.map(() => 0)));
+    setSupply((prev) => prev.map(() => 0));
+    setDemand((prev) => prev.map(() => 0));
+  };
+
+  const currentRowCount =
+    orientation === 'standard' ? supply.length : demand.length;
+  const currentColCount =
+    orientation === 'standard' ? demand.length : supply.length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-slate-100 py-10 px-4 sm:px-6 lg:px-8 text-slate-900">
+      <div className="max-w-6xl mx-auto">
+        {/* ส่วนหัวข้อหน้าเว็บจำลองสไตล์ข้อสอบ */}
+        <header className="mb-6 bg-white p-6 rounded-xl border-2 border-black shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-black">
+              Transportation Model Solver:{' '}
+              <span className="underline decoration-2 underline-offset-4">
+                North–West Corner Method
+              </span>
+            </h1>
+            <span className="font-serif text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded border border-slate-300">
+              Interactive Matrix & Auto-Dummy
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">
+            คลิกที่ตัวเลขมุมขวาบนของแต่ละช่องเพื่อแก้ไขค่า{' '}
+            <strong>Cost (c<sub>ij</sub>)</strong> หรือปรับค่า{' '}
+            <strong>Supply / Demand</strong> ได้โดยตรง
+            หากผลรวมไม่เท่ากันระบบจะเพิ่มแถวหรือคอลัมน์{' '}
+            <strong>Dummy</strong> ให้อัตโนมัติ
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </header>
+
+        {/* แผงควบคุมการเพิ่ม/ลดแถว-คอลัมน์ และปุ่มสลับแกน */}
+        <MatrixControls
+          rowCount={currentRowCount}
+          colCount={currentColCount}
+          orientation={orientation}
+          showSolution={showSolution}
+          onAddRow={handleAddRow}
+          onRemoveRow={handleRemoveRow}
+          onAddCol={handleAddCol}
+          onRemoveCol={handleRemoveCol}
+          onToggleOrientation={handleToggleOrientation}
+          onToggleSolution={() => setShowSolution((prev) => !prev)}
+          onResetDefault={handleResetDefault}
+          onClearData={handleClearData}
+        />
+
+        {/* พื้นที่แสดงตาราง Transportation */}
+        <section className="bg-white p-6 rounded-xl border-2 border-slate-800 shadow-lg">
+          <TransportationTable
+            result={result}
+            orientation={orientation}
+            showSolution={showSolution}
+            onCostChange={handleCostChange}
+            onSupplyChange={handleSupplyChange}
+            onDemandChange={handleDemandChange}
+          />
+        </section>
+
+        {/* สรุปขั้นตอนการคำนวณและค่า Total Cost (TC) */}
+        {showSolution && <SolutionSummary result={result} />}
+      </div>
+    </main>
   );
 }
