@@ -56,7 +56,7 @@ export default function HomePage() {
   // --- ฟังก์ชันเพิ่ม/ลดแถวและคอลัมน์ตามแกนปัจจุบัน ---
   const addSupply = () => {
     if (supply.length >= 8) return;
-    setSupply((prev) => [...prev, 100]);
+    setSupply((prev) => [...prev, 0]);
     setCosts((prev) => [...prev, new Array(demand.length).fill(0)]);
   };
 
@@ -68,7 +68,7 @@ export default function HomePage() {
 
   const addDemand = () => {
     if (demand.length >= 8) return;
-    setDemand((prev) => [...prev, 100]);
+    setDemand((prev) => [...prev, 0]);
     setCosts((prev) => prev.map((row) => [...row, 0]));
   };
 
